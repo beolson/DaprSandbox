@@ -1,28 +1,56 @@
 version: '3.4'
 
 services:
+
+  ############################
+  # .NET Fontend app + Dapr sidecar
+  ############################
   myfrontend:
     image: ${DOCKER_REGISTRY-}myfrontend
     build:
       context: .
       dockerfile: MyFrontEnd/Dockerfile
-
+    networks:
+      - hello-dapr
+      
   myfrontend-dapr:
     image: "daprio/daprd:latest"
     command: [ "./daprd", "-app-id", "MyFrontEnd", "-app-port", "80" ]
     depends_on:
       - myfrontend
+      - dapr-placement
     network_mode: "service:myfrontend"
 
+  ############################
+  # .NET Service + Dapr sidecar
+  ############################
   mybackend:
     image: ${DOCKER_REGISTRY-}mybackend
     build:
       context: .
       dockerfile: MyBackEnd/Dockerfile
+    networks:
+      - hello-dapr
 
   mybackend-dapr:
     image: "daprio/daprd:latest"
     command: [ "./daprd", "-app-id", "MyBackEnd", "-app-port", "80" ]
     depends_on:
       - mybackend
+      - dapr-placement
     network_mode: "service:mybackend"
+
+  ############################
+  # Dapr placement service
+  ############################
+
+  dapr-placement:
+    image: "daprio/dapr"
+    command: ["./placement", "-port", "50006"]
+    ports:
+      - "50006:50006"
+    networks:
+      - hello-dapr
+
+networks:
+    hello-dapr:
